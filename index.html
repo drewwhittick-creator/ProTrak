@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Focus">
+<meta name="apple-mobile-web-app-title" content="ProTrak">
 <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23007AFF'/%3E%3Cpath d='M19 33l9 9 17-19' fill='none' stroke='white' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
@@ -17,7 +17,7 @@ body{margin:0;font-size:14px}
 img{max-width:100%}
 [hidden]{display:none!important}
 </style>
-<title>Project Focus</title>
+<title>ProTrak</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
@@ -94,6 +94,8 @@ svg{display:block}
 .c-meta{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:4px;font-size:13px;color:var(--label2)}
 .c-meta .qz{color:var(--c);font-weight:600}
 .c-meta .ex{border:1px dashed var(--label3);border-radius:6px;padding:0 6px;font-size:12px}
+.c-why{margin-top:4px;font-size:13px;color:var(--label2)}
+.d-why{margin:4px 0 2px;font-size:15px;font-weight:500}
 .c-wait{margin-top:8px;font-size:14px;color:var(--c)}
 .c-wait b{font-weight:600}
 .c-next{display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 12px;background:var(--fill2);border-radius:12px}
@@ -303,15 +305,30 @@ a.row{text-decoration:none}
 .row .cname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .row .v.fixed{flex:none}
 .tag{font-size:12px;font-weight:600;padding:1px 7px;border-radius:99px;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);margin-left:6px}
+.txt-btn.sm{font-size:14px;padding:0 2px}
+#who{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.gate{position:fixed;inset:0;z-index:40;background:var(--bg);display:grid;place-items:center;padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.gate-card{width:100%;max-width:360px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;animation:pop .6s var(--ease) both}
+.gate-icon{width:76px;height:76px;border-radius:20px;background:var(--blue);color:#fff;display:grid;place-items:center;box-shadow:0 10px 30px color-mix(in srgb,var(--blue) 35%,transparent)}
+.gate-icon svg{width:40px;height:40px}
+.gate h2{font-family:var(--font-display);font-size:30px;font-weight:700;margin:6px 0 0}
+.gate p{margin:0;color:var(--label2)}
+.gbtn{width:100%;margin-top:14px;background:var(--label);color:var(--bg);font-size:17px;font-weight:600;border-radius:14px;padding:15px;transition:transform .2s var(--ease),opacity .2s}
+.gbtn:active{transform:scale(.98)}
+.gbtn:disabled{opacity:.5}
+.gate-msg{font-size:13px;color:var(--red)!important;min-height:1em}
+#migrate:empty{display:none}
+#migrate .banner{margin:4px 0 14px}
 @media (prefers-reduced-motion:reduce){*,*::before{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
-<header class="nav" id="nav"><span class="nav-title">Project Focus</span></header>
+<header class="nav" id="nav"><span class="nav-title">ProTrak</span></header>
 <div class="wrap">
   <div class="large" id="large">
-    <h1>Project Focus</h1>
-    <p><span id="today"></span><span aria-hidden="true">·</span><span class="sdot" id="sdot"></span><span id="stext">Connecting</span></p>
+    <h1>ProTrak</h1>
+    <p><span id="today"></span><span aria-hidden="true">·</span><span class="sdot" id="sdot"></span><span id="stext">Connecting</span><span id="who" hidden><span aria-hidden="true">·</span> <span id="who-email"></span> <button class="txt-btn sm" id="signout">Sign Out</button></span><button class="txt-btn sm" id="signin-link" hidden>Sign In to Sync</button></p>
+  <div id="migrate"></div>
   </div>
 
   <section class="tiles" aria-label="Summary">
@@ -340,6 +357,20 @@ a.row{text-decoration:none}
 <div id="sheet-root"></div>
 <div class="toast" id="toast" role="status"></div>
 
+<div class="gate" id="gate" hidden>
+  <div class="gate-card">
+    <div class="gate-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+    <h2>ProTrak</h2>
+    <p>Sign in with Google to keep your projects in sync on your laptop and phone.</p>
+    <button class="gbtn" id="gsignin">Continue with Google</button>
+    <button class="txt-btn" id="glocal">Use on this device only</button>
+    <p class="gate-msg" id="gate-msg" role="alert"></p>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 (function(){
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -362,11 +393,13 @@ const I={
 const IMPACT={5:['Critical','Big consequences if it slips','red'],4:['High','Clearly moves things forward','orange'],3:['Moderate','Worth doing well','yellow'],2:['Some','Nice to have','teal'],1:['Minor','Little effect either way','gray']};
 const URG={5:['Today','Needs attention right now','red'],4:['This week','Should move in the next few days','orange'],3:['Next two weeks','Coming up soon','yellow'],2:['This month','On the horizon','teal'],1:['Whenever','No real time pressure','gray']};
 const STATUS={active:['Ready to go','You can work on it now','blue'],waiting:['Waiting on someone','Needs a reply or input first','indigo'],blocked:['Blocked','Something has to change first','red'],done:['Done','Finished and off your plate','green']};
+const SCOPE={3:['Large','Weeks of work with lots of steps','indigo','L'],2:['Medium','A few days of effort','blue','M'],1:['Small','A few hours or less','teal','S']};
+const LEAD={1:2,2:7,3:21},LEADTXT={1:'a day or two',2:'about a week',3:'a few weeks'};
 const QUAD={
-  now:{label:'Do Now',hint:'High impact and urgent. Work on these first.',c:'orange',i:'bolt'},
-  plan:{label:'Schedule',hint:'Important, not urgent yet. Block time for it.',c:'blue',i:'cal'},
-  quick:{label:'Quick Win',hint:'Urgent, lower impact. Knock it out or hand it off.',c:'teal',i:'ff'},
-  later:{label:'Later',hint:'Low impact, no rush. Park it for now.',c:'gray',i:'moon'}
+  now:{label:'Do Now',hint:'Due soon for the work it needs, or a big project that needs time today.',c:'orange',i:'bolt'},
+  plan:{label:'Schedule',hint:'Important, with room on the clock. Block time for it.',c:'blue',i:'cal'},
+  quick:{label:'Quick Win',hint:'Pressing but lower impact. Knock it out or hand it off.',c:'teal',i:'ff'},
+  later:{label:'Later',hint:'Small or low impact, no rush. Park it for now.',c:'gray',i:'moon'}
 };
 const QTEXT={
   name:['What are you working on?','Give the project a short name you’ll recognise.'],
@@ -378,8 +411,9 @@ const QTEXT={
   blocker:['What’s holding it up?','Who or what, and when you’ll follow up.'],
   steps:['What’s the very next step?','Something small you could do today. Add more if you know them.']
 };
+QTEXT.scope=['How big is it?','Roughly how much work it takes, not how important it is.'];
 QTEXT.files=['Where are the files?','A folder path, shared drive location or link.'];
-const LABEL={name:'Name',files:'Files',stakeholder:'For',due:'Due',impact:'Impact',urgency:'Urgency',status:'Status',blocker:'Holding it up',steps:'Next Steps'};
+const LABEL={scope:'Size',name:'Name',files:'Files',stakeholder:'For',due:'Due',impact:'Impact',urgency:'Urgency',status:'Status',blocker:'Holding it up',steps:'Next Steps'};
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -396,10 +430,32 @@ function daysUntil(due){const d=parse(due);return d?Math.round((d-today0())/864e
 function fmtShort(due){return parse(due).toLocaleDateString(undefined,{month:'short',day:'numeric'})}
 function fmtLong(due){return parse(due).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})}
 function relDue(due){const n=daysUntil(due);if(n===null)return '';if(n<-1)return (-n)+' days overdue';if(n===-1)return 'Yesterday';if(n===0)return 'Today';if(n===1)return 'Tomorrow';if(n<7)return parse(due).toLocaleDateString(undefined,{weekday:'long'});return fmtShort(due)}
-function dueUrg(p){const n=daysUntil(p.due);if(n===null)return 0;if(n<=1)return 5;if(n<=5)return 4;if(n<=14)return 3;if(n<=31)return 2;return 1}
-function effUrg(p){return Math.max(p.urgency||1,dueUrg(p))}
-function quad(p){const hi=(p.impact||1)>=3,ur=effUrg(p)>=3;return hi&&ur?'now':hi?'plan':ur?'quick':'later'}
-function score(p){const n=daysUntil(p.due);return (p.impact||1)*effUrg(p)*10+(n!==null&&n<0?15:0)}
+function sc(p){return p.scope||2}
+function workedToday(p){return workDays(p).has(iso(today0()))}
+function dueUrg(p){const n=daysUntil(p.due);if(n===null)return 0;if(n<=0)return 5;const k=sc(p),q=n/LEAD[k];let u=q<=.5?5:q<=1?4:q<=2?3:q<=4?2:1;if(k===1&&n>7)u=Math.min(u,2);return u}
+function effUrg(p){if(!p.due)return p.urgency||1;const d=dueUrg(p);let u=Math.max(d,Math.min(p.urgency||1,d+1));if(sc(p)===1&&daysUntil(p.due)>7)u=Math.min(u,2);return u}
+function nudge(p){
+  if(p.status!=='active'||sc(p)<3||workedToday(p)||dueUrg(p)>=4)return false;
+  const idle=idleDays(p);if(idle===null||idle<2)return false;
+  const n=daysUntil(p.due);if(n!==null&&n>LEAD[sc(p)]*3)return false;
+  if(n===null&&(p.impact||1)<4)return false;
+  return true;
+}
+function quad(p){const hi=(p.impact||1)>=3,ur=effUrg(p)>=4;if(hi&&(ur||nudge(p)))return 'now';return hi?'plan':ur?'quick':'later'}
+function score(p){const n=daysUntil(p.due);return (p.impact||1)*effUrg(p)*10+(n!==null&&n<0?15:0)+(nudge(p)?25:0)-(workedToday(p)&&(n===null||n>1)?15:0)}
+function why(p){
+  const k=sc(p),n=daysUntil(p.due),size=SCOPE[k][0];
+  if(nudge(p))return size+' project, '+(lastWorked(p)?'no time in '+idleDays(p)+' days':'not started yet')+'. Put some time in today';
+  if(k===3&&workedToday(p)&&dueUrg(p)<4)return 'Large project. You put time in today';
+  if(p.due){
+    if(n<0)return 'Overdue by '+(-n)+' day'+(n===-1?'':'s');
+    if(n===0)return 'Due today';
+    if(k===1&&n>7)return 'Small task due in '+n+' days. It can wait';
+    if(n<=LEAD[k])return 'Due in '+n+' day'+(n===1?'':'s')+' and needs '+LEADTXT[k];
+    return 'Due in '+n+' days, enough time for its size';
+  }
+  return 'No due date';
+}
 function nextStep(p){return (p.steps||[]).find(s=>!s.done&&s.text)}
 function localDay(t){const d=new Date(t);return iso(new Date(d.getFullYear(),d.getMonth(),d.getDate()))}
 function workDays(p){const w=new Set(p.activity||[]);(p.steps||[]).forEach(x=>{if(x.done&&x.doneAt)w.add(localDay(x.doneAt))});return w}
@@ -447,29 +503,94 @@ function settle(){
 }
 function create(d){
   const id=uid(),now=new Date().toISOString();
-  overrides[id]={id,name:d.name.trim(),stakeholder:(d.stakeholder||'').trim(),due:d.due||'',impact:d.impact||3,urgency:d.urgency||2,status:d.status||'active',blocker:(d.blocker||'').trim(),
+  overrides[id]={id,name:d.name.trim(),stakeholder:(d.stakeholder||'').trim(),due:d.due||'',scope:d.scope||2,impact:d.impact||3,urgency:d.urgency||2,status:d.status||'active',blocker:(d.blocker||'').trim(),
     steps:(d.steps||[]).filter(s=>s.text.trim()).map(s=>({id:s.id||uid(),text:s.text.trim(),done:false})),notes:[],created:now,updated:now};
   flush(id);renderMain();return id;
 }
 function saveLocal(){const out={};for(const p of all())out[p.id]=clean(p);ls.set('pf-projects',JSON.stringify(out))}
 function setSync(state,text){$('#sdot').className='sdot '+state;$('#stext').textContent=text}
 
-async function init(){
-  let db=null;
-  try{db=await(window.claude&&window.claude.use?window.claude.use('db'):null)}catch(e){db=null}
-  if(!db){
-    mode='local';
-    try{const raw=JSON.parse(ls.get('pf-projects')||'{}');for(const id in raw)remote[id]={...raw[id],id}}catch(e){}
-    setSync('warn','Saved on this device only');confirmed=true;renderMain();return;
-  }
-  mode='db';col=db.collection('projects');
-  const timer=setTimeout(()=>{if(!confirmed){setSync('warn','Can’t reach your projects yet');if(!Object.keys(remote).length)$('#main').innerHTML='<div class="empty"><h3>Still connecting</h3>Your projects will appear once the connection returns.</div>'}},10000);
-  col.onSnapshot(snap=>{
-    const next={};for(const d of snap.docs)next[d.id]={...d.data(),id:d.id};
+const FIREBASE_CONFIG={
+  apiKey:"AIzaSyClcdADpgYE9bRqf3XXXnfkBI5lbXpBC7U",
+  authDomain:"protrak-b09d1.firebaseapp.com",
+  projectId:"protrak-b09d1",
+  storageBucket:"protrak-b09d1.firebasestorage.app",
+  messagingSenderId:"170221843005",
+  appId:"1:170221843005:web:04cb5680118d57d9ab7054"
+};
+let fbAuth=null,fs=null,unsub=null,syncTimer=null,currentUser=null;
+function loadLocal(){const out={};try{const raw=JSON.parse(ls.get('pf-projects')||'{}');for(const id in raw)out[id]={...raw[id],id}}catch(e){}return out}
+function showGate(msg){$('#gate').hidden=false;$('#gate-msg').textContent=msg||'';$('#gsignin').disabled=false;document.documentElement.style.overflow='hidden'}
+function hideGate(){$('#gate').hidden=true;if(!stack.length)document.documentElement.style.overflow=''}
+function startLocal(){
+  mode='local';remote=loadLocal();overrides={};confirmed=true;
+  setSync('warn','Saved on this device only');
+  $('#who').hidden=true;$('#signin-link').hidden=!fbAuth;$('#migrate').innerHTML='';
+  hideGate();renderMain();
+}
+function authMsg(e){
+  const c=e&&e.code||'';
+  if(c==='auth/unauthorized-domain')return 'This website isn’t on Firebase’s authorized domains list yet.';
+  if(c==='auth/operation-not-allowed')return 'Google sign-in isn’t turned on in Firebase Authentication yet.';
+  if(c==='auth/network-request-failed')return 'No connection. Check your internet and try again.';
+  return 'Sign-in didn’t finish. Please try again.';
+}
+function signIn(){
+  if(!fbAuth)return;
+  ls.set('pf-mode','cloud');$('#gsignin').disabled=true;$('#gate-msg').textContent='';
+  const prov=new firebase.auth.GoogleAuthProvider();prov.setCustomParameters({prompt:'select_account'});
+  fbAuth.signInWithPopup(prov).catch(e=>{
+    if(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment')return fbAuth.signInWithRedirect(prov);
+    $('#gsignin').disabled=false;
+    if(e.code!=='auth/popup-closed-by-user'&&e.code!=='auth/cancelled-popup-request')$('#gate-msg').textContent=authMsg(e);
+  });
+}
+function offerMigration(){
+  const box=$('#migrate');if(!currentUser){box.innerHTML='';return}
+  const key='pf-migrated-'+currentUser.uid;
+  const local=loadLocal(),ids=Object.keys(local).filter(id=>!remote[id]&&!local[id]._deleted);
+  if(ls.get(key)||!ids.length){box.innerHTML='';return}
+  box.innerHTML='<div class="banner"><span>'+ids.length+' project'+(ids.length===1?' is':'s are')+' saved in this browser only.</span><span style="display:flex;gap:14px"><button class="txt-btn" id="mig-no">Not Now</button><button class="txt-btn" id="mig-yes" style="font-weight:600">Move to My Account</button></span></div>';
+  $('#mig-no').onclick=()=>{ls.set(key,'dismissed');box.innerHTML=''};
+  $('#mig-yes').onclick=async()=>{
+    const btn=$('#mig-yes');btn.disabled=true;btn.textContent='Moving…';
+    try{for(const id of ids)await col.doc(id).set(clean(local[id]));ls.set(key,'done');box.innerHTML='';toast('Moved '+ids.length+' project'+(ids.length===1?'':'s')+' to your account')}
+    catch(e){btn.disabled=false;btn.textContent='Try Again';toast('Couldn’t move projects. Check your connection.')}
+  };
+}
+function startCloud(user){
+  currentUser=user;mode='db';confirmed=false;remote={};overrides={};
+  col=fs.collection('users').doc(user.uid).collection('projects');
+  $('#who').hidden=false;$('#who-email').textContent=user.email||'Signed in';$('#signin-link').hidden=true;
+  setSync('','Connecting');hideGate();renderMain();
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(()=>{if(!confirmed){setSync('warn','Offline. Changes will sync later');confirmed=true;renderMain()}},10000);
+  unsub=col.onSnapshot({includeMetadataChanges:true},snap=>{
+    const next={};snap.docs.forEach(d=>{next[d.id]={...d.data(),id:d.id}});
     remote=next;
-    if(!snap.metadata.fromCache){confirmed=true;clearTimeout(timer);setSync('ok','Synced')}
+    if(!snap.metadata.fromCache){confirmed=true;clearTimeout(syncTimer);setSync(snap.metadata.hasPendingWrites?'warn':'ok',snap.metadata.hasPendingWrites?'Syncing':'Synced');offerMigration()}
+    else if(Object.keys(next).length)confirmed=true;
     settle();renderMain();refreshDetail();
-  },()=>{clearTimeout(timer);confirmed=true;setSync('warn','Sync paused. Reload to reconnect');renderMain()});
+  },()=>{clearTimeout(syncTimer);confirmed=true;setSync('warn','Sync stopped. Reload to reconnect');renderMain()});
+}
+async function init(){
+  if(!(window.firebase&&firebase.initializeApp)){startLocal();setSync('warn','Sync unavailable. Saved on this device only');return}
+  firebase.initializeApp(FIREBASE_CONFIG);
+  fbAuth=firebase.auth();fs=firebase.firestore();
+  try{await fs.enablePersistence({synchronizeTabs:true})}catch(e){}
+  fbAuth.getRedirectResult().catch(e=>showGate(authMsg(e)));
+  $('#gsignin').onclick=signIn;
+  $('#glocal').onclick=()=>{ls.set('pf-mode','local');startLocal()};
+  $('#signin-link').onclick=()=>{ls.set('pf-mode','cloud');showGate()};
+  $('#signout').onclick=()=>{ls.set('pf-mode','cloud');fbAuth.signOut()};
+  fbAuth.onAuthStateChanged(user=>{
+    if(unsub){unsub();unsub=null}
+    currentUser=null;closeSheet();
+    if(user){startCloud(user);return}
+    if(ls.get('pf-mode')==='local'){startLocal();return}
+    mode='loading';confirmed=false;remote={};overrides={};$('#who').hidden=true;$('#migrate').innerHTML='';
+    showGate();
+  });
 }
 
 /* ---------- main list ---------- */
@@ -505,6 +626,7 @@ function card(p,rank,key){
   let h='<article class="card" data-key="'+key+'" data-open="'+p.id+'" tabindex="0"><div class="c-top">';
   if(rank)h+='<span class="rank" style="--c:var(--'+Q.c+')">'+rank+'</span>';
   h+='<div class="c-title">'+esc(p.name||'Untitled')+'</div>'+due+'</div><div class="c-meta">'+meta.join('')+'</div>';
+  if(p.status==='active')h+='<div class="c-why">'+esc(why(p))+'</div>';
   if((p.status==='waiting'||p.status==='blocked'))h+='<div class="c-wait" style="--c:var(--'+STATUS[p.status][2]+')"><b>'+(p.status==='waiting'?'Waiting':'Blocked')+'</b>'+(p.blocker?' · '+esc(p.blocker):'')+'</div>';
   if(p.status==='active'){
     h+=ns?'<div class="c-next"><button class="circle" data-tick="'+p.id+'" data-step="'+ns.id+'" aria-label="Complete next step">'+I.check+'</button><span class="txt">'+esc(ns.text)+'</span><span class="lbl">NEXT</span></div>'
@@ -548,7 +670,7 @@ function renderMain(animate){
       const Q=QUAD[k],items=open.filter(p=>quad(p)===k).sort(byPriority);
       return '<div class="quad" style="--c:var(--'+Q.c+')"><h4><span class="ic">'+I[Q.i]+'</span>'+Q.label+'<span class="n">'+items.length+'</span></h4><p>'+Q.hint+'</p><ul>'+
         (items.length?items.map(p=>'<li data-key="m-'+p.id+'"><button data-open="'+p.id+'"><span>'+esc(p.name||'Untitled')+'</span><span>'+(p.status!=='active'?(p.status==='waiting'?'Waiting':'Blocked'):(p.due?esc(relDue(p.due)):''))+'</span></button></li>').join(''):'<li class="none">Nothing here</li>')+'</ul></div>';
-    }).join('')+'</div><p class="note-sm">Urgency rises on its own as due dates approach.</p>';
+    }).join('')+'</div><p class="note-sm">Urgency comes from the due date and how much work each project needs.</p>';
   }else{
     h+='<div class="pills">'+Object.keys(FILTERS).map(k=>'<button data-filter="'+k+'" aria-pressed="'+(filter===k)+'">'+FILTERS[k][0]+' '+ps.filter(FILTERS[k][1]).length+'</button>').join('')+'</div>';
     const list=ps.filter(FILTERS[filter][1]).sort((a,b)=>filter==='done'?(b.updated||'').localeCompare(a.updated||''):byPriority(a,b));
@@ -610,12 +732,13 @@ function dueChips(val){
     '<label class="date-row"><span>'+(val&&!known?'Picked: '+esc(fmtLong(val)):'Or pick a date')+'</span><input type="date" id="q-date" value="'+esc(val)+'"></label>';
 }
 function choiceList(map,val,keys){
-  return '<div class="choices">'+keys.map(k=>{const [l,d,c]=map[k];return '<button class="choice'+(String(k)===String(val)?' sel':'')+'" data-choice="'+k+'"><span class="c-num" style="--c:var(--'+c+')">'+(/^\d$/.test(k)?k:'<i></i>')+'</span><span class="c-txt"><b>'+l+'</b><small>'+d+'</small></span><span class="c-check">'+I.check+'</span></button>'}).join('')+'</div>';
+  return '<div class="choices">'+keys.map(k=>{const [l,d,c]=map[k];return '<button class="choice'+(String(k)===String(val)?' sel':'')+'" data-choice="'+k+'"><span class="c-num" style="--c:var(--'+c+')">'+(map[k][3]||(/^\d$/.test(k)?k:'<i></i>'))+'</span><span class="c-txt"><b>'+l+'</b><small>'+d+'</small></span><span class="c-check">'+I.check+'</span></button>'}).join('')+'</div>';
 }
 const PH={files:'e.g. SharePoint > Marketing > Q1 Launch, or paste a link',name:'e.g. Q1 launch plan',stakeholder:'e.g. Sarah, Finance team',blocker:'e.g. Legal review, follow up Thursday'};
 function control(field,val,opts={}){
   if(field==='name'||field==='stakeholder'||field==='blocker'||field==='files')return '<input class="q-input" id="q-in" value="'+esc(val)+'" placeholder="'+PH[field]+'" autocomplete="off" enterkeyhint="'+(opts.edit?'done':'next')+'">';
   if(field==='due')return dueChips(val);
+  if(field==='scope')return choiceList(SCOPE,val,[3,2,1]);
   if(field==='impact')return choiceList(IMPACT,val,[5,4,3,2,1]);
   if(field==='urgency')return choiceList(URG,val,[5,4,3,2,1]);
   if(field==='status')return choiceList(STATUS,val,opts.edit?['active','waiting','blocked','done']:['active','waiting','blocked']);
@@ -639,12 +762,12 @@ function bindControl(el,field,hooks){
 }
 
 /* ---------- quiz ---------- */
-function order(d){const o=['name','stakeholder','due','impact','urgency','status'];if(d.status==='waiting'||d.status==='blocked')o.push('blocker');o.push('steps','review');return o}
+function order(d){const o=['name','stakeholder','due','scope','impact','urgency','status'];if(d.status==='waiting'||d.status==='blocked')o.push('blocker');o.push('steps','review');return o}
 function startQuiz(){
-  quiz={d:{name:'',stakeholder:'',due:'',impact:0,urgency:0,status:'',blocker:'',steps:[{id:uid(),text:''}]},field:'name',toReview:false,confirm:false,prog:0};
+  quiz={d:{name:'',stakeholder:'',due:'',scope:0,impact:0,urgency:0,status:'',blocker:'',steps:[{id:uid(),text:''}]},field:'name',toReview:false,confirm:false,prog:0};
   openSheet(quizView);
 }
-function canGo(f){const d=quiz.d;if(f==='name')return !!d.name.trim();if(f==='impact')return !!d.impact;if(f==='urgency')return !!d.urgency;if(f==='status')return !!d.status;return true}
+function canGo(f){const d=quiz.d;if(f==='name')return !!d.name.trim();if(f==='scope')return !!d.scope;if(f==='impact')return !!d.impact;if(f==='urgency')return !!d.urgency;if(f==='status')return !!d.status;return true}
 function isEmpty(f){const d=quiz.d;if(f==='steps')return !d.steps.some(s=>s.text.trim());return !String(d[f]||'').trim()}
 function btnLabel(f){if(f==='review')return 'Add Project';if(quiz.toReview)return 'Done';if((f==='stakeholder'||f==='due'||f==='blocker'||f==='steps')&&isEmpty(f))return 'Skip';return 'Continue'}
 function go(f,dir){quiz.field=f;quiz.confirm=false;replace(quizView,dir)}
@@ -677,8 +800,8 @@ function quizView(){
   if(f==='review'){
     const q=quad(d),Q=QUAD[q];
     const rank=d.status==='active'?rankFor({...d,id:'__draft'}):0;
-    body='<div class="hero" style="--c:var(--'+Q.c+')"><div class="ic">'+I[Q.i]+'</div><h2>'+Q.label+'</h2><p>'+(rank?'This will be <b>#'+rank+'</b> on your Focus list. ':'')+Q.hint+'</p></div>'+
-      '<div class="group">'+['name','stakeholder','due','impact','urgency','status'].concat(d.status==='waiting'||d.status==='blocked'?['blocker']:[]).concat(['steps']).map(k=>'<button class="row" data-jump="'+k+'"><span class="k">'+LABEL[k]+'</span><span class="v">'+esc(summary(k,d))+'</span><span class="chev">'+I.chevR+'</span></button>').join('')+'</div>'+
+    body='<div class="hero" style="--c:var(--'+Q.c+')"><div class="ic">'+I[Q.i]+'</div><h2>'+Q.label+'</h2><p>'+(rank?'This will be <b>#'+rank+'</b> on your Focus list. ':'')+esc(why(d))+'. '+Q.hint+'</p></div>'+
+      '<div class="group">'+['name','stakeholder','due','scope','impact','urgency','status'].concat(d.status==='waiting'||d.status==='blocked'?['blocker']:[]).concat(['steps']).map(k=>'<button class="row" data-jump="'+k+'"><span class="k">'+LABEL[k]+'</span><span class="v">'+esc(summary(k,d))+'</span><span class="chev">'+I.chevR+'</span></button>').join('')+'</div>'+
       '<p class="g-f">Tap anything to change it.</p>';
   }else{
     const [t,s]=QTEXT[f];
@@ -724,6 +847,7 @@ function summary(k,d){
   if(k==='name')return d.name||'—';
   if(k==='stakeholder')return d.stakeholder||'Not set';
   if(k==='due')return d.due?fmtLong(d.due):'No due date';
+  if(k==='scope')return d.scope?SCOPE[d.scope][0]:'\u2014';
   if(k==='impact')return d.impact?d.impact+' · '+IMPACT[d.impact][0]:'—';
   if(k==='urgency')return d.urgency?d.urgency+' · '+URG[d.urgency][0]:'—';
   if(k==='status')return d.status?STATUS[d.status][0]:'—';
@@ -745,12 +869,12 @@ function detailView(id,opts={}){
   const n=daysUntil(p.due);
   const fm=(p.files||'').match(/https?:\/\/\S+/),fileUrl=fm?fm[0]:'';
   const rows=[['stakeholder',p.stakeholder||'Add',!p.stakeholder],['due',p.due?relDue(p.due)+(Math.abs(n)>=7||n<-1?'':' · '+fmtShort(p.due)):'None',!p.due,n!==null&&n<0&&p.status!=='done'],
-    ['impact',(p.impact||1)+' · '+IMPACT[p.impact||1][0]],['urgency',(p.urgency||1)+' · '+URG[p.urgency||1][0]+(effUrg(p)>(p.urgency||1)?' (raised by due date)':'')],['status',STATUS[p.status][0]]];
+    ['scope',p.scope?SCOPE[p.scope][0]:'Set size',!p.scope],['impact',(p.impact||1)+' · '+IMPACT[p.impact||1][0]],['urgency',(p.urgency||1)+' · '+URG[p.urgency||1][0]+(p.due&&p.status!=='done'&&effUrg(p)!==(p.urgency||1)?' (counts as '+effUrg(p)+')':'')],['status',STATUS[p.status][0]]];
   if(p.status==='waiting'||p.status==='blocked')rows.push(['blocker',p.blocker||'Add',!p.blocker]);
   const sub=[];if(rank)sub.push('#'+rank+' on your Focus list');if(p.updated)sub.push('Updated '+new Date(p.updated).toLocaleDateString(undefined,{month:'short',day:'numeric'}));
   const el=mk('<div class="vh">'+(opts.pushed?'<button class="nav-btn" data-act="close">'+I.chevL+'Completed</button>':'<span></span>')+'<div class="vh-title"></div><button class="nav-btn r strong" data-act="'+(opts.pushed?'closeall':'close')+'">Done</button></div><div class="vb">'+
     '<div class="d-top">'+(p.status==='done'?'<span class="badge" style="--c:var(--green)">'+I.check+'Done</span>':'<span class="badge" style="--c:var(--'+Q.c+')">'+I[Q.i]+Q.label+'</span>')+
-    '<textarea class="d-name" id="d-name" rows="1" aria-label="Project name">'+esc(p.name)+'</textarea><p class="d-sub">'+sub.join(' · ')+'</p>'+
+    '<textarea class="d-name" id="d-name" rows="1" aria-label="Project name">'+esc(p.name)+'</textarea>'+(p.status==='active'?'<p class="d-why">'+esc(why(p))+'</p>':'')+'<p class="d-sub">'+sub.join(' · ')+'</p>'+
     (p.status!=='done'?(()=>{const wt=workDays(p).has(iso(today0()));return '<button class="worked'+(wt?' on':'')+'" id="worked">'+(wt?I.check+'Worked on This Today':I.clock+'Spent Time on This Today')+'</button><p class="worked-sub">'+workSub(p)+'</p>'})():'')+'</div>'+
     '<h3 class="g-h">Next Steps</h3><div class="group">'+
       st.map((s,i)=>'<div class="row step'+(s.done?' done':'')+'"><button class="circle'+(s.done?' on':'')+'" data-stoggle="'+s.id+'" aria-label="'+(s.done?'Mark not done':'Mark done')+'">'+I.check+'</button><input class="row-in" data-stext="'+s.id+'" value="'+esc(s.text)+'" aria-label="Step"'+(i===firstOpen?' style="font-weight:600"':'')+'><button class="rm" data-sdel="'+s.id+'" aria-label="Delete step">'+I.minus+'</button></div>').join('')+
@@ -812,7 +936,7 @@ function editView(id,field){
     set:v=>edit(id,x=>{x[field]=v},typeof v==='string'&&field!=='due'&&field!=='status'?600:0),
     commit:()=>{
       if(field==='status'){const np=get(id);if(np&&(np.status==='waiting'||np.status==='blocked')){replace(()=>editView(id,field),'none');const b=$('#q-blk');if(b)b.focus();return}}
-      if(field==='due'||field==='impact'||field==='urgency'||field==='status'||field==='name'||field==='stakeholder'||field==='blocker'||field==='files')pop();
+      if(field==='due'||field==='scope'||field==='impact'||field==='urgency'||field==='status'||field==='name'||field==='stakeholder'||field==='blocker'||field==='files')pop();
     }
   });
   const blk=el.querySelector('#q-blk');
