@@ -323,11 +323,25 @@ a.row{text-decoration:none}
 #migrate .banner{margin:4px 0 14px}
 #routines:empty{display:none}
 .rt{background:var(--surface);border-radius:16px;box-shadow:var(--shadow);padding:12px 0 6px;margin-bottom:14px}
-.rt-head{display:flex;align-items:center;gap:12px;padding:0 16px 6px}
-.rt-head div{flex:1;min-width:0}
-.rt-head h2{margin:0;font-family:var(--font-display);font-size:20px;font-weight:700;line-height:1.2}
-.rt-head span{font-size:13px;color:var(--label2)}
-.ring{width:30px;height:30px;transform:rotate(-90deg);flex:none}
+.rt-head{display:flex;align-items:center;gap:8px;padding:0 16px 6px 12px}
+.rt-toggle{flex:1;min-width:0;display:flex;align-items:center;gap:12px;text-align:left;padding:4px;border-radius:10px}
+.rt-toggle:active{background:var(--fill2)}
+.rt-title{flex:1;min-width:0;display:flex;flex-direction:column}
+.rt-title b{font-family:var(--font-display);font-size:20px;font-weight:700;line-height:1.2}
+.rt-title small{font-size:13px;color:var(--label2)}
+.rt-chev{color:var(--label3);flex:none}
+.rt-chev svg{width:15px;height:15px;transform:rotate(90deg);transition:transform .35s var(--ease)}
+.rt.collapsed .rt-chev svg{transform:none}
+.rt-body{display:grid;grid-template-rows:1fr;transition:grid-template-rows .4s var(--ease),opacity .3s}
+.rt-body>div{overflow:hidden;min-height:0}
+.rt.collapsed .rt-body{grid-template-rows:0fr;opacity:0}
+.rt.collapsed{padding-bottom:8px}
+.mgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.mday{aspect-ratio:1;max-width:100%;border-radius:50%;background:var(--cell);font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;transition:background .2s,color .2s,transform .2s var(--ease)}
+.mday:active{transform:scale(.9)}
+.mday.sel{background:var(--blue);color:#fff}
+.next-due{font-weight:500;color:var(--blue)!important}
+.ring{width:34px;height:34px;transform:rotate(-90deg);flex:none}
 .ring .rb{fill:none;stroke:var(--fill);stroke-width:4}
 .ring .rf{fill:none;stroke:var(--green);stroke-width:4;stroke-linecap:round}
 .rt-row{display:flex;align-items:center;gap:12px;padding:9px 16px;position:relative}
@@ -626,7 +640,18 @@ async function init(){
 let rRemote={},rOver={},rcol=null,rInflight={},rAgain={},runsub=null;
 const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const DAYS_LONG=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-const FREQ={daily:['Every day','Resets each morning','green','D'],weekdays:['Weekdays','Monday to Friday','blue','W'],weekly:['Weekly','Once a week, on a day you pick','indigo','1']};
+const FREQ={daily:['Every day','Resets each morning','green','D'],weekdays:['Weekdays','Monday to Friday','blue','W'],weekly:['Weekly','Once a week, on a day you pick','indigo','1'],biweekly:['Every two weeks','Every other week, on a day you pick','teal','2'],monthly:['Monthly','On a date you pick each month','orange','M']};
+const PERIODIC={weekly:1,biweekly:1,monthly:1};
+function addD(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
+function ordinal(n){const t=n%100;return n+((t>=11&&t<=13)?'th':({1:'st',2:'nd',3:'rd'}[n%10]||'th'))}
+function anchorOf(r){return parse(r.anchor)||weekStart(r.created?new Date(r.created):today0())}
+function period(r,t){
+  if(r.freq==='monthly'){const y=t.getFullYear(),m=t.getMonth(),last=new Date(y,m+1,0).getDate();return {s:new Date(y,m,1),e:new Date(y,m+1,1),due:new Date(y,m,Math.min(r.mday||1,last))}}
+  const off=((r.day??1)+6)%7;
+  if(r.freq==='biweekly'){const a=anchorOf(r),ws=weekStart(t);if(ws<a)return {s:a,e:addD(a,14),due:addD(a,off)};const k=Math.floor(Math.round((ws-a)/864e5)/14),s=addD(a,14*k);return {s,e:addD(s,14),due:addD(s,off)}}
+  const s=weekStart(t);return {s,e:addD(s,7),due:addD(s,off)};
+}
+function streakText(r,n){return r.freq==='daily'||r.freq==='weekdays'?n+'-day streak':r.freq==='weekly'?n+'-week streak':n+' in a row'}
 function rAll(){const ids=new Set([...Object.keys(rRemote),...Object.keys(rOver)]);return [...ids].map(id=>rOver[id]||rRemote[id]).filter(r=>r&&!r._deleted).sort((a,b)=>(a.created||'').localeCompare(b.created||''))}
 function rGet(id){const r=rOver[id]||rRemote[id];return r&&!r._deleted?r:null}
 function rSave(r){r.updated=new Date().toISOString();rOver[r.id]=r;renderToday();rFlush(r.id)}
@@ -647,23 +672,39 @@ function rOnSnap(snap){const n={};snap.docs.forEach(d=>{n[d.id]={...d.data(),id:
 function onDay(r,d){const w=d.getDay();return r.freq==='weekdays'?(w>=1&&w<=5):r.freq==='weekly'?w===(r.day??1):true}
 function weekStart(d){const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
 function dueDate(r){
-  const t=today0();if(r.freq!=='weekly')return onDay(r,t)?t:null;
-  const d=weekStart(t);d.setDate(d.getDate()+(((r.day??1)+6)%7));return d<=t?d:null;
+  const t=today0();if(!PERIODIC[r.freq])return onDay(r,t)?t:null;
+  const p=period(r,t);return p.due<=t?p.due:null;
 }
 function isDone(r){const d=dueDate(r);if(!d)return false;const k=iso(d);return (r.done||[]).some(x=>x>=k)}
 function streak(r){
   const done=new Set(r.done||[]);let n=0;
-  if(r.freq==='weekly'){
-    const ws=weekStart(today0()),list=[...done];
-    for(let i=0;i<104;i++){const s=new Date(ws);s.setDate(s.getDate()-7*i);const e=new Date(s);e.setDate(e.getDate()+7);
-      const hit=list.some(x=>x>=iso(s)&&x<iso(e));if(hit)n++;else if(i>0)break;}
+  if(PERIODIC[r.freq]){
+    const list=[...done];let t=today0();
+    for(let i=0;i<120;i++){const p=period(r,t);if(p.s>t)break;const hit=list.some(x=>x>=iso(p.s)&&x<iso(p.e));if(hit)n++;else if(i>0)break;t=addD(p.s,-1)}
     return n;
   }
   const d=today0();
   for(let i=0;i<400;i++){if(onDay(r,d)){if(done.has(iso(d)))n++;else if(i>0)break}d.setDate(d.getDate()-1)}
   return n;
 }
-function freqText(r){return r.freq==='weekly'?'Every '+DAYS_LONG[r.day??1]:FREQ[r.freq||'daily'][0]}
+function freqText(r){
+  if(r.freq==='weekly')return 'Every '+DAYS_LONG[r.day??1];
+  if(r.freq==='biweekly')return 'Every other '+DAYS_LONG[r.day??1];
+  if(r.freq==='monthly')return 'Monthly on the '+ordinal(r.mday||1);
+  return FREQ[r.freq||'daily'][0];
+}
+function nextDue(r){
+  const t=today0();
+  for(let i=0;i<70;i++){const d=addD(t,i);if(PERIODIC[r.freq]?iso(period(r,d).due)===iso(d):onDay(r,d))return d}
+  return null;
+}
+function collapsedToday(){return ls.get('pf-rt-col')===iso(today0())}
+function toggleCollapse(force){
+  const el=document.querySelector('.rt');if(!el)return;
+  const c=force??!el.classList.contains('collapsed');
+  el.classList.toggle('collapsed',c);ls.set('pf-rt-col',c?iso(today0()):'');
+  const b=el.querySelector('.rt-toggle');if(b)b.setAttribute('aria-expanded',String(!c));
+}
 function ring(f){const c=2*Math.PI*11;return '<svg class="ring" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="11" class="rb"/><circle cx="14" cy="14" r="11" class="rf" stroke-dasharray="'+c.toFixed(2)+'" stroke-dashoffset="'+(c*(1-f)).toFixed(2)+'"/></svg>'}
 function toggleRoutine(id){
   const cur=rGet(id);if(!cur)return;const r=JSON.parse(JSON.stringify(cur));const d=dueDate(r);if(!d)return;
@@ -672,33 +713,34 @@ function toggleRoutine(id){
   const p=r.projectId&&get(r.projectId);
   if(p&&p.status!=='done'){edit(r.projectId,logToday,0)}
   rSave(r);
-  const st=streak(r);
-  toast(st>1?st+(r.freq==='weekly'?'-week':'-day')+' streak'+(p?' · time logged on '+p.name:''):(p?'Done · time logged on '+p.name:'Done for '+(r.freq==='weekly'?'this week':'today')));
+  const st=streak(r),due=rAll().filter(x=>dueDate(x)),allDone=due.length&&due.every(isDone);
+  if(allDone){toast('All done for today'+(p?' \u00b7 time logged on '+p.name:''));setTimeout(()=>{if(rAll().filter(x=>dueDate(x)).every(isDone))toggleCollapse(true)},reduce?0:700);return}
+  toast(st>1?streakText(r,st)+(p?' \u00b7 time logged on '+p.name:''):(p?'Done \u00b7 time logged on '+p.name:'Done'));
 }
 function renderToday(){
   const box=$('#routines');if(!box)return;
   if(mode==='loading'){box.innerHTML='';return}
   const rs=rAll(),due=rs.filter(r=>dueDate(r));
-  if(!rs.length){box.innerHTML='<button class="rt-empty" id="rt-add">'+I.plus+'<span><b>Add a repeating task</b><small>Things you do every day or week, like clearing your inbox or updating a tracker</small></span></button>';return}
-  const doneN=due.filter(isDone).length;
+  if(!rs.length){box.innerHTML='<button class="rt-empty" id="rt-add">'+I.plus+'<span><b>Add a repeating task</b><small>Things you do every day, week or month, like clearing your inbox or updating a tracker</small></span></button>';return}
+  const doneN=due.filter(isDone).length,col=collapsedToday();
   const status=due.length?(doneN===due.length?'All done for today':doneN+' of '+due.length+' done'):'Nothing scheduled today';
-  let h='<section class="rt"><div class="rt-head">'+ring(due.length?doneN/due.length:0)+'<div><h2>Today</h2><span>'+status+'</span></div><button class="txt-btn" id="rt-all">See All</button></div>';
+  let h='<section class="rt'+(col?' collapsed':'')+'"><div class="rt-head"><button class="rt-toggle" aria-expanded="'+(!col)+'">'+ring(due.length?doneN/due.length:0)+'<span class="rt-title"><b>Today</b><small>'+status+'</small></span><span class="rt-chev">'+I.chevR+'</span></button><button class="txt-btn" id="rt-all">See All</button></div><div class="rt-body"><div>';
   h+=due.map(r=>{
     const dn=isDone(r),st=streak(r),p=r.projectId&&get(r.projectId),dd=dueDate(r);
     const meta=[esc(freqText(r))];
-    if(r.freq==='weekly'&&!dn&&iso(dd)<iso(today0()))meta.push('<span class="late">Due '+DAYS[dd.getDay()]+'</span>');
-    if(st>1)meta.push(st+(r.freq==='weekly'?'-week':'-day')+' streak');
+    if(PERIODIC[r.freq]&&!dn&&iso(dd)<iso(today0()))meta.push('<span class="late">Due '+(r.freq==='monthly'?fmtShort(iso(dd)):DAYS[dd.getDay()])+'</span>');
+    if(st>1)meta.push(streakText(r,st));
     if(p)meta.push(esc(p.name));
-    return '<div class="rt-row'+(dn?' done':'')+'" data-key="r-'+r.id+'"><button class="circle'+(dn?' on':'')+'" data-rtick="'+r.id+'" aria-label="'+(dn?'Mark not done':'Mark done')+'">'+I.check+'</button><button class="rt-txt" data-redit="'+r.id+'"><b>'+esc(r.name)+'</b><small>'+meta.join(' · ')+'</small></button></div>';
+    return '<div class="rt-row'+(dn?' done':'')+'" data-key="r-'+r.id+'"><button class="circle'+(dn?' on':'')+'" data-rtick="'+r.id+'" aria-label="'+(dn?'Mark not done':'Mark done')+'">'+I.check+'</button><button class="rt-txt" data-redit="'+r.id+'"><b>'+esc(r.name)+'</b><small>'+meta.join(' \u00b7 ')+'</small></button></div>';
   }).join('');
-  if(!due.length)h+='<p class="rt-none">Your weekly tasks will show up on their day.</p>';
-  box.innerHTML=h+'</section>';
+  if(!due.length)h+='<p class="rt-none">Weekly and monthly tasks show up here on their day.</p>';
+  box.innerHTML=h+'</div></div></section>';
 }
 function routinesView(){
   const rs=rAll();
   const el=mk('<div class="vh"><span></span><div class="vh-title"></div><button class="nav-btn r strong" data-act="close">Done</button></div><div class="vb">'+
     '<div class="q" style="padding-top:4px"><h2>Repeating Tasks</h2><p class="q-sub">Ticks reset on their own each day or week.</p></div>'+
-    '<div class="group">'+rs.map(r=>{const st=streak(r);return '<button class="row" data-redit="'+r.id+'"><span class="cname">'+esc(r.name)+'</span><span class="v fixed">'+esc(freqText(r))+(st>1?' · '+st+(r.freq==='weekly'?'w':'d'):'')+'</span><span class="chev">'+I.chevR+'</span></button>'}).join('')+
+    '<div class="group">'+rs.map(r=>{const st=streak(r);return '<button class="row" data-redit="'+r.id+'"><span class="cname">'+esc(r.name)+'</span><span class="v fixed">'+esc(freqText(r))+(st>1?' \u00b7 '+st+' in a row':'')+'</span><span class="chev">'+I.chevR+'</span></button>'}).join('')+
     '<button class="row add" data-act="new">'+I.plus+'New Repeating Task</button></div>'+
     '<p class="g-f">Link a task to a project and ticking it off counts as time spent on that project.</p></div>');
   el.addEventListener('click',e=>{
@@ -709,19 +751,27 @@ function routinesView(){
   return el;
 }
 function routineEditor(id,draft){
-  const ex=id?rGet(id):null;
-  const d=draft||(ex?JSON.parse(JSON.stringify(ex)):{id:uid(),name:'',freq:'daily',day:today0().getDay(),projectId:'',done:[],created:new Date().toISOString()});
+  const ex=id?rGet(id):null,t=today0();
+  const d=draft||(ex?JSON.parse(JSON.stringify(ex)):{id:uid(),name:'',freq:'daily',day:t.getDay(),mday:t.getDate(),anchor:iso(weekStart(t)),projectId:'',done:[],created:new Date().toISOString()});
+  if(d.day==null)d.day=t.getDay();if(!d.mday)d.mday=t.getDate();if(!d.anchor)d.anchor=iso(anchorOf(d));
   const projects=all().filter(p=>p.status!=='done').sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  const back=stack.length>1;
+  const back=stack.length>1,nx=nextDue(d);
+  const thisWk=iso(weekStart(t)),nextWk=iso(addD(weekStart(t),7));
+  let sched='';
+  if(d.freq==='weekly'||d.freq==='biweekly')sched+='<h3 class="g-h">On</h3><div class="chips">'+[1,2,3,4,5,6,0].map(k=>'<button class="chip'+(d.day===k?' sel':'')+'" data-rday="'+k+'">'+DAYS[k]+'</button>').join('')+'</div>';
+  if(d.freq==='biweekly')sched+='<h3 class="g-h">Starting</h3><div class="chips"><button class="chip'+(d.anchor===thisWk?' sel':'')+'" data-anchor="'+thisWk+'">This week</button><button class="chip'+(d.anchor===nextWk?' sel':'')+'" data-anchor="'+nextWk+'">Next week</button></div>';
+  if(d.freq==='monthly')sched+='<h3 class="g-h">Day of the Month</h3><div class="mgrid">'+Array.from({length:31},(_,i)=>i+1).map(k=>'<button class="mday'+(d.mday===k?' sel':'')+'" data-mday="'+k+'">'+k+'</button>').join('')+'</div>'+(d.mday>28?'<p class="g-f">In shorter months it’s due on the last day.</p>':'');
+  if(dueDate(d)&&!isDone(d))sched+='<p class="g-f next-due">Due now</p>';
+  else if(nx)sched+='<p class="g-f next-due">Next: '+(iso(nx)===iso(t)?'Today':esc(fmtLong(iso(nx))))+'</p>';
   const el=mk('<div class="vh"><button class="nav-btn" data-act="cancel">'+(back?I.chevL+'Back':'Cancel')+'</button><div class="vh-title">'+(ex?'Edit Task':'New Task')+'</div><button class="nav-btn r strong" data-act="save"'+(d.name.trim()?'':' disabled style="opacity:.4"')+'>'+(ex?'Save':'Add')+'</button></div><div class="vb">'+
     '<h3 class="g-h">Task</h3><input class="q-input" id="rt-name" value="'+esc(d.name)+'" placeholder="e.g. Clear project inbox" autocomplete="off" enterkeyhint="done">'+
-    '<h3 class="g-h">Repeats</h3>'+choiceList(FREQ,d.freq,['daily','weekdays','weekly'])+
-    (d.freq==='weekly'?'<h3 class="g-h">On</h3><div class="chips">'+[1,2,3,4,5,6,0].map(k=>'<button class="chip'+((d.day??1)===k?' sel':'')+'" data-rday="'+k+'">'+DAYS[k]+'</button>').join('')+'</div>':'')+
+    '<h3 class="g-h">Repeats</h3>'+choiceList(FREQ,d.freq,['daily','weekdays','weekly','biweekly','monthly'])+sched+
     '<h3 class="g-h">Linked Project</h3><select class="q-input" id="rt-proj"><option value="">None</option>'+projects.map(p=>'<option value="'+p.id+'"'+(d.projectId===p.id?' selected':'')+'>'+esc(p.name||'Untitled')+'</option>').join('')+'</select>'+
     '<p class="g-f">Optional. Ticking the task off also counts as time spent on this project.</p>'+
     (ex?'<div class="group" style="margin-top:28px"><button class="row danger" data-act="del">Delete Task</button></div>':'')+'</div>');
   const leave=()=>{back?pop():closeSheet()};
   const save=()=>{if(!d.name.trim())return;d.name=d.name.trim();rSave(d);leave();toast(ex?'Task saved':'Repeating task added')};
+  const redraw=()=>replace(()=>routineEditor(id,d),'none');
   const nm=el.querySelector('#rt-name'),sv=el.querySelector('[data-act="save"]');
   nm.addEventListener('input',()=>{d.name=nm.value;const ok=!!d.name.trim();sv.disabled=!ok;sv.style.opacity=ok?'':'.4'});
   nm.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();nm.blur()}});
@@ -733,12 +783,15 @@ function routineEditor(id,draft){
       else if(act==='save')save();
       else if(act==='del'){if(a.classList.contains('armed')){rSave({...ex,_deleted:true});leave();toast('Task deleted')}else{a.classList.add('armed');a.textContent='Tap Again to Delete'}}
       return}
-    const c=e.target.closest('[data-choice]');if(c){d.freq=c.dataset.choice;replace(()=>routineEditor(id,d),'none');return}
-    const dy=e.target.closest('[data-rday]');if(dy){d.day=+dy.dataset.rday;el.querySelectorAll('[data-rday]').forEach(x=>x.classList.toggle('sel',x===dy))}
+    const c=e.target.closest('[data-choice]');if(c){d.freq=c.dataset.choice;redraw();return}
+    const dy=e.target.closest('[data-rday]');if(dy){d.day=+dy.dataset.rday;redraw();return}
+    const an=e.target.closest('[data-anchor]');if(an){d.anchor=an.dataset.anchor;redraw();return}
+    const md=e.target.closest('[data-mday]');if(md){d.mday=+md.dataset.mday;redraw();return}
   });
   if(!ex&&!draft)el._focus='#rt-name';
   return el;
 }
+
 
 /* ---------- main list ---------- */
 let tab=ls.get('pf-tab')||'focus',filter='open';
@@ -1165,7 +1218,8 @@ document.addEventListener('click',e=>{
   if(rt&&!e.target.closest('#sheet-root')){rt.classList.toggle('on');const row=rt.closest('.rt-row');if(row)row.classList.toggle('done');setTimeout(()=>toggleRoutine(rt.dataset.rtick),reduce?0:320);return}
   const re=e.target.closest('[data-redit]');if(re&&!e.target.closest('#sheet-root')){detailId=null;quiz=null;openSheet(()=>routineEditor(re.dataset.redit));return}
   if(e.target.closest('#rt-add')){detailId=null;quiz=null;openSheet(()=>routineEditor(null));return}
-  if(e.target.closest('#rt-all')){detailId=null;quiz=null;openSheet(routinesView);return}}
+  if(e.target.closest('#rt-all')){detailId=null;quiz=null;openSheet(routinesView);return}
+  if(e.target.closest('.rt-toggle')){toggleCollapse();return}}
   if(e.target.closest('#sheet-root')){
     if(e.target.closest('[data-act="dismiss"]')){if(quiz)cancelQuiz();else closeSheet()}
     return;

@@ -10,7 +10,7 @@ It's a single HTML file with no build step. It syncs between devices through Fir
 - **Matrix view**: projects sorted into Do Now, Schedule, Quick Win and Later.
 - **Size-aware priority**: each project has a size (Small, Medium, Large). Urgency compares the days left with the work the project needs, so a small task due in two weeks waits while a medium one due in four days moves up. Large projects you haven't touched in a couple of days get pulled into Do Now until you put time in. Each card shows the reason for its priority.
 - **New-project quiz**: one question per screen (name, stakeholder, due date, size, impact, urgency, status, next steps), ending with a review screen.
-- **Repeating tasks**: a Today checklist for tasks that repeat every day, on weekdays or weekly, with streaks. A task can be linked to a project so ticking it off counts as time spent.
+- **Repeating tasks**: a Today checklist for tasks that repeat every day, on weekdays, weekly, every two weeks or monthly, with streaks. It collapses once everything is done. A task can be linked to a project so ticking it off counts as time spent.
 - **Time tracking**: a "Spent Time on This Today" button in each project. Ticking off a step also counts. Cards show when you last worked on a project and flag ones untouched for 7+ days, and the All tab has a Neglected filter.
 - **Project details**: next steps, stakeholder, due date, status and blockers, file location (with Open Link or Copy Location), and dated notes.
 - **Completed Projects screen**: completion counts, average time to finish, on-time rate, steps per week, progress on open projects, weekly charts, and a button to clear completed projects.
