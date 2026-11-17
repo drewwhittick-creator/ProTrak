@@ -469,9 +469,10 @@ function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'
 function addDays(n){const d=today0();d.setDate(d.getDate()+n);return d}
 function parse(due){const [y,m,d]=(due||'').split('-').map(Number);return y?new Date(y,m-1,d):null}
 function daysUntil(due){const d=parse(due);return d?Math.round((d-today0())/864e5):null}
-function fmtShort(due){return parse(due).toLocaleDateString(undefined,{month:'short',day:'numeric'})}
-function fmtLong(due){return parse(due).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})}
-function relDue(due){const n=daysUntil(due);if(n===null)return '';if(n<-1)return (-n)+' days overdue';if(n===-1)return 'Yesterday';if(n===0)return 'Today';if(n===1)return 'Tomorrow';if(n<7)return parse(due).toLocaleDateString(undefined,{weekday:'long'});return fmtShort(due)}
+const _fd={};function fd(o){const k=JSON.stringify(o);return _fd[k]||(_fd[k]=new Intl.DateTimeFormat(undefined,o))}
+function fmtShort(due){return fd({month:'short',day:'numeric'}).format(parse(due))}
+function fmtLong(due){return fd({weekday:'short',month:'short',day:'numeric'}).format(parse(due))}
+function relDue(due){const n=daysUntil(due);if(n===null)return '';if(n<-1)return (-n)+' days overdue';if(n===-1)return 'Yesterday';if(n===0)return 'Today';if(n===1)return 'Tomorrow';if(n<7)return fd({weekday:'long'}).format(parse(due));return fmtShort(due)}
 function sc(p){return p.scope||2}
 function workedToday(p){return workDays(p).has(iso(today0()))}
 function dueUrg(p){const n=daysUntil(p.due);if(n===null)return 0;if(n<=0)return 5;const k=sc(p),q=n/LEAD[k];let u=q<=.5?5:q<=1?4:q<=2?3:q<=4?2:1;if(k===1&&n>7)u=Math.min(u,2);return u}
@@ -500,7 +501,8 @@ function why(p){
 }
 function nextStep(p){return (p.steps||[]).find(s=>!s.done&&s.text)}
 function localDay(t){const d=new Date(t);return iso(new Date(d.getFullYear(),d.getMonth(),d.getDate()))}
-function workDays(p){const w=new Set(p.activity||[]);(p.steps||[]).forEach(x=>{if(x.done&&x.doneAt)w.add(localDay(x.doneAt))});return w}
+const _wd=new WeakMap();
+function workDays(p){const c=_wd.get(p);if(c)return c;const w=new Set(p.activity||[]);(p.steps||[]).forEach(x=>{if(x.done&&x.doneAt)w.add(localDay(x.doneAt))});_wd.set(p,w);return w}
 function lastWorked(p){let m='';workDays(p).forEach(d=>{if(d>m)m=d});return m}
 function idleDays(p){const lw=lastWorked(p);if(lw)return -daysUntil(lw);return p.created?-daysUntil(localDay(p.created)):null}
 function logToday(x){x.activity=[...new Set([...(x.activity||[]),iso(today0())])].sort().slice(-365)}
@@ -522,7 +524,7 @@ function edit(id,fn,delay){
   const p=JSON.parse(JSON.stringify(base));fn(p);p.updated=new Date().toISOString();
   overrides[id]=p;clearTimeout(timers[id]);
   timers[id]=setTimeout(()=>{timers[id]=null;flush(id)},delay??350);
-  renderMain();return p;
+  scheduleRender();return p;
 }
 async function flush(id){
   if(inflight[id]){again[id]=true;return}
@@ -534,7 +536,7 @@ async function flush(id){
   }catch(e){toast(e&&e.code==='quota_exceeded'?'Storage is full. Delete old projects to save more.':'Couldn’t save that change. Check your connection.')}
   inflight[id]=false;
   if(again[id]){again[id]=false;flush(id);return}
-  if(mode==='db'){settle();renderMain()}
+  if(mode==='db'){settle();scheduleRender()}
 }
 function settle(){
   for(const id of Object.keys(overrides)){
@@ -613,7 +615,7 @@ function startCloud(user){
     remote=next;
     if(!snap.metadata.fromCache){confirmed=true;clearTimeout(syncTimer);setSync(snap.metadata.hasPendingWrites?'warn':'ok',snap.metadata.hasPendingWrites?'Syncing':'Synced');offerMigration()}
     else if(Object.keys(next).length)confirmed=true;
-    settle();renderMain();refreshDetail();
+    settle();scheduleRender();refreshDetail();
   },()=>{clearTimeout(syncTimer);confirmed=true;setSync('warn','Sync stopped. Reload to reconnect');renderMain()});
 }
 async function init(){
@@ -849,7 +851,11 @@ function setSeg(){
   $('#ind').style.transform='translateX('+(i*100)+'%)';
   document.querySelectorAll('#seg button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===tab));
 }
+let renderQueued=false,mainDirty=false;
+function scheduleRender(){if(renderQueued)return;renderQueued=true;requestAnimationFrame(()=>{renderQueued=false;renderMain()})}
 function renderMain(animate){
+  if(stack.length&&!animate){mainDirty=true;return}
+  mainDirty=false;
   setSeg();renderToday();
   if(!confirmed&&!Object.keys(remote).length&&!Object.keys(overrides).length)return;
   const ps=all();renderTiles(ps);
@@ -894,7 +900,7 @@ function openSheet(viewFn){
 }
 function closeSheet(){
   const root=$('#sheet-root');if(!stack.length)return;
-  stack=[];quiz=null;root.classList.remove('open');document.documentElement.style.overflow='';
+  stack=[];quiz=null;root.classList.remove('open');if(mainDirty)renderMain();document.documentElement.style.overflow='';
   if(document.activeElement)document.activeElement.blur();
   setTimeout(()=>{if(!stack.length)root.innerHTML=''},reduce?0:460);
 }
@@ -1071,7 +1077,7 @@ function detailView(id,opts={}){
   const rows=[['stakeholder',p.stakeholder||'Add',!p.stakeholder],['due',p.due?relDue(p.due)+(Math.abs(n)>=7||n<-1?'':' · '+fmtShort(p.due)):'None',!p.due,n!==null&&n<0&&p.status!=='done'],
     ['scope',p.scope?SCOPE[p.scope][0]:'Set size',!p.scope],['impact',(p.impact||1)+' · '+IMPACT[p.impact||1][0]],['urgency',(p.urgency||1)+' · '+URG[p.urgency||1][0]+(p.due&&p.status!=='done'&&effUrg(p)!==(p.urgency||1)?' (counts as '+effUrg(p)+')':'')],['status',STATUS[p.status][0]]];
   if(p.status==='waiting'||p.status==='blocked')rows.push(['blocker',p.blocker||'Add',!p.blocker]);
-  const sub=[];if(rank)sub.push('#'+rank+' on your Focus list');if(p.updated)sub.push('Updated '+new Date(p.updated).toLocaleDateString(undefined,{month:'short',day:'numeric'}));
+  const sub=[];if(rank)sub.push('#'+rank+' on your Focus list');if(p.updated)sub.push('Updated '+fd({month:'short',day:'numeric'}).format(new Date(p.updated)));
   const el=mk('<div class="vh">'+(opts.pushed?'<button class="nav-btn" data-act="close">'+I.chevL+'Completed</button>':'<span></span>')+'<div class="vh-title"></div><button class="nav-btn r strong" data-act="'+(opts.pushed?'closeall':'close')+'">Done</button></div><div class="vb">'+
     '<div class="d-top">'+(p.status==='done'?'<span class="badge" style="--c:var(--green)">'+I.check+'Done</span>':'<span class="badge" style="--c:var(--'+Q.c+')">'+I[Q.i]+Q.label+'</span>')+
     '<textarea class="d-name" id="d-name" rows="1" aria-label="Project name">'+esc(p.name)+'</textarea>'+(p.status==='active'?'<p class="d-why">'+esc(why(p))+'</p>':'')+'<p class="d-sub">'+sub.join(' · ')+'</p>'+
@@ -1083,7 +1089,7 @@ function detailView(id,opts={}){
     '<h3 class="g-h">Details</h3><div class="group">'+rows.map(([k,v,muted,red])=>'<button class="row" data-edit="'+k+'"><span class="k">'+LABEL[k]+'</span><span class="v'+(muted?' blue':'')+(red?' red':'')+'">'+esc(v)+'</span><span class="chev">'+I.chevR+'</span></button>').join('')+'</div>'+
     '<h3 class="g-h">Files</h3><div class="group">'+(p.files?'<button class="row files" data-edit="files"><span class="ftxt">'+esc(p.files)+'</span><span class="chev">'+I.chevR+'</span></button>'+(fileUrl?'<a class="row add" href="'+esc(fileUrl)+'" target="_blank" rel="noopener">Open Link</a>':'<button class="row add" id="copy-files">Copy Location</button>'):'<button class="row add" data-edit="files">'+I.plus+'Add File Location</button>')+'</div>'+
     '<h3 class="g-h">Notes</h3><div class="group"><div class="row note-new"><textarea id="note-in" rows="1" placeholder="Add a note"></textarea><button class="txt-btn" id="note-add">Add</button></div>'+
-      (p.notes||[]).slice().sort((a,b)=>(b.at||'').localeCompare(a.at||'')).map(nt=>'<div class="note"><div class="when"><span>'+new Date(nt.at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+'</span><button data-ndel="'+nt.id+'">Delete</button></div><p>'+esc(nt.text)+'</p></div>').join('')+'</div>'+
+      (p.notes||[]).slice().sort((a,b)=>(b.at||'').localeCompare(a.at||'')).map(nt=>'<div class="note"><div class="when"><span>'+fd({month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(nt.at))+'</span><button data-ndel="'+nt.id+'">Delete</button></div><p>'+esc(nt.text)+'</p></div>').join('')+'</div>'+
     '<div class="group" style="margin-top:28px">'+(p.status==='done'?'<button class="row complete reopen" id="complete">Reopen Project</button>':'<button class="row complete" id="complete">'+I.check+'Complete Project</button>')+'</div></div>');
   const grow=t=>{t.style.height='auto';t.style.height=t.scrollHeight+'px'};
   const nm=el.querySelector('#d-name');
@@ -1155,7 +1161,7 @@ function statsView(){
   const open=ps.filter(p=>p.status!=='done');
   const end=today0().getTime()+DAY;
   const wk=Array(W).fill(0),sw=Array(W).fill(0),labels=[];
-  for(let i=0;i<W;i++)labels.push(new Date(end-(W-i)*7*DAY).toLocaleDateString(undefined,{month:'numeric',day:'numeric'}));
+  for(let i=0;i<W;i++)labels.push(fd({month:'numeric',day:'numeric'}).format(new Date(end-(W-i)*7*DAY)));
   const bucket=t=>{const k=Math.floor((end-t)/(7*DAY));return k>=0&&k<W?W-1-k:-1};
   done.forEach(d=>{const b=bucket(d.at);if(b>=0)wk[b]++});
   let stepsDone=0,steps7=0,undated=0;
@@ -1185,7 +1191,7 @@ function statsView(){
   b+='<h3 class="g-h">Steps Completed per Week</h3><div class="group pad">'+weekBars(sw,labels,'blue')+'</div>';
   if(undated)b+='<p class="g-f">'+undated+' step'+(undated===1?' was':'s were')+' ticked off before step dates were tracked, so '+(undated===1?'it isn’t':'they aren’t')+' in this chart.</p>';
   b+='<h3 class="g-h">Projects Completed per Week</h3><div class="group pad">'+weekBars(wk,labels,'green')+'</div>';
-  b+='<h3 class="g-h">Completed Projects</h3><div class="group">'+(done.length?done.map(d=>'<button class="row" data-openc="'+d.p.id+'"><span class="cname">'+esc(d.p.name||'Untitled')+'</span><span class="v fixed">'+new Date(d.at).toLocaleDateString(undefined,{month:'short',day:'numeric'})+(d.p.due?(late(d)?'<span class="tag" style="--c:var(--red)">Late</span>':'<span class="tag" style="--c:var(--green)">On time</span>'):'')+'</span><span class="chev">'+I.chevR+'</span></button>').join(''):'<div class="pad"><p class="muted">Projects you complete will show up here.</p></div>')+'</div>';
+  b+='<h3 class="g-h">Completed Projects</h3><div class="group">'+(done.length?done.map(d=>'<button class="row" data-openc="'+d.p.id+'"><span class="cname">'+esc(d.p.name||'Untitled')+'</span><span class="v fixed">'+fd({month:'short',day:'numeric'}).format(new Date(d.at))+(d.p.due?(late(d)?'<span class="tag" style="--c:var(--red)">Late</span>':'<span class="tag" style="--c:var(--green)">On time</span>'):'')+'</span><span class="chev">'+I.chevR+'</span></button>').join(''):'<div class="pad"><p class="muted">Projects you complete will show up here.</p></div>')+'</div>';
   if(done.length)b+='<div class="group" style="margin-top:28px"><button class="row danger" id="wipe">Clear Completed Projects</button></div><p class="g-f">Permanently deletes '+done.length+' completed project'+(done.length===1?'':'s')+' and the stats based on '+(done.length===1?'it':'them')+'. Open projects aren’t affected.</p>';
   const el=mk('<div class="vh"><span></span><div class="vh-title"></div><button class="nav-btn r strong" data-act="close">Done</button></div><div class="vb">'+b+'</div>');
   el.addEventListener('click',e=>{
@@ -1212,7 +1218,7 @@ function refreshDetail(){
 function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('show'),2400)}
 
 /* ---------- events ---------- */
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){$('#today').textContent=new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});renderMain()}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){$('#today').textContent=fd({weekday:'long',month:'long',day:'numeric'}).format(new Date());renderMain()}});
 document.addEventListener('click',e=>{
   {const rt=e.target.closest('[data-rtick]');
   if(rt&&!e.target.closest('#sheet-root')){rt.classList.toggle('on');const row=rt.closest('.rt-row');if(row)row.classList.toggle('done');setTimeout(()=>toggleRoutine(rt.dataset.rtick),reduce?0:320);return}
@@ -1244,7 +1250,7 @@ document.addEventListener('keydown',e=>{
 $('#new-btn').addEventListener('click',()=>{detailId=null;startQuiz()});
 new IntersectionObserver(([en])=>$('#nav').classList.toggle('scrolled',!en.isIntersecting),{rootMargin:'-46px 0px 0px 0px'}).observe($('.large h1'));
 
-$('#today').textContent=new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
+$('#today').textContent=fd({weekday:'long',month:'long',day:'numeric'}).format(new Date());
 renderMain();init();
 })();
 </script>
