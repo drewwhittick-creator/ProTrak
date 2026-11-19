@@ -360,6 +360,16 @@ a.row{text-decoration:none}
 .rt-empty b{font-weight:600;font-size:15px}
 .rt-empty small{color:var(--label2);font-size:13px}
 select.q-input{appearance:none;-webkit-appearance:none;font-size:17px}
+/* scrolling performance: frosted bars only on iPhone/iPad Safari; flat cards with a hairline edge on desktop */
+.toolbar,.nav{transform:translateZ(0)}
+.nav.scrolled,.toolbar{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--bg)}
+@supports (-webkit-touch-callout:none){
+  .nav.scrolled,.toolbar{-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);background:var(--bar)}
+}
+@media (hover:hover) and (pointer:fine){
+  :root{--shadow:none}
+  .card,.tile,.tile-row,.rt,.rt-empty,.banner{outline:.5px solid var(--sep);outline-offset:-.5px}
+}
 @media (prefers-reduced-motion:reduce){*,*::before{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -1099,7 +1109,7 @@ function detailView(id,opts={}){
   const ni=el.querySelector('#note-in');ni.addEventListener('input',()=>grow(ni));
   el.querySelector('#note-add').addEventListener('click',()=>{const v=ni.value.trim();if(!v)return;edit(id,x=>{(x.notes=x.notes||[]).push({id:uid(),at:new Date().toISOString(),text:v})},0);replace(self,'none')});
   const ns=el.querySelector('#new-step');
-  const addStep=()=>{const v=ns.value.trim();if(!v)return;edit(id,x=>{(x.steps=x.steps||[]).push({id:uid(),text:v,done:false})},0);replace(self,'none');const n2=$('#new-step');if(n2)n2.focus()};
+  const addStep=()=>{const v=ns.value.trim();if(!v)return;ns.value='';edit(id,x=>{(x.steps=x.steps||[]).push({id:uid(),text:v,done:false})},0);replace(self,'none');const n2=$('#new-step');if(n2)n2.focus()};
   ns.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addStep()}});
   ns.addEventListener('blur',()=>{if(ns.value.trim())setTimeout(addStep,0)});
   el.addEventListener('input',e=>{const s=e.target.dataset.stext;if(s)edit(id,x=>{const t=x.steps.find(y=>y.id===s);if(t)t.text=e.target.value},600)});
